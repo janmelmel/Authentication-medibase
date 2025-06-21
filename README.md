@@ -29,7 +29,7 @@ cd medibase-app
 cd backend
 npm install
 
-# the backend server:
+the backend server:
 node server.js
 
 
