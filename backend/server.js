@@ -4,6 +4,8 @@ const connectDB = require("./config/db");
 
 const app = express();
 const PORT = 5000;
+const authRoutes = require("./routes/auth");
+const userRoutes = require("./routes/users");
 
 // Connect to MongoDB
 connectDB();
@@ -24,3 +26,6 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+app.use("/api", authRoutes);     // /api/login, /api/register
+app.use("/api/users", userRoutes); // /api/users/:id etc.

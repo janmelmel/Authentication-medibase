@@ -1,52 +1,71 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import "./../styles/global.css";
 
 function Register() {
-    const [form, setForm] = useState({ name: "", email: "", password: "" });
-    const [message, setMessage] = useState("");
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const navigate = useNavigate();
 
-    const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
-    };
+  // 🔒 Redirect if already logged in
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem("isLoggedIn");
+    const role = localStorage.getItem("role");
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-        const res = await axios.post("http://localhost:5000/api/register", form);
-            setMessage(res.data.message);
-        } catch (err) {
-            setMessage(err.response?.data?.message || "Something went wrong");
-        }
-    };
-
-    return (
-        <div style={{ padding: "20px" }}>
-        <h2>Register</h2>
-        <form onSubmit={handleSubmit}>
-            <input
-            name="name"
-            placeholder="Name"
-            onChange={handleChange}
-            value={form.name}
-            /><br /><br />
-            <input
-            name="email"
-            placeholder="Email"
-            onChange={handleChange}
-            value={form.email}
-            /><br /><br />
-            <input
-            name="password"
-            type="password"
-            placeholder="Password"
-            onChange={handleChange}
-            value={form.password}
-            /><br /><br />
-            <button type="submit">Register</button>
-        </form>
-            <p>{message}</p>
-        </div>
-    );
+    if (isLoggedIn) {
+      navigate(role === "admin" ? "/admin-dashboard" : "/dashboard");
     }
+  }, []);
 
-    export default Register;
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post("http://localhost:5000/api/register", form);
+      alert("Registered successfully. You can now login.");
+      navigate("/login");
+    } catch {
+      alert("Registration failed");
+    }
+  };
+
+  return (
+    <div style={{ display: "grid", placeItems: "center", minHeight: "100vh" }}>
+      <form onSubmit={handleSubmit}>
+        <h2>Register</h2>
+        <input
+          name="name"
+          placeholder="Name"
+          value={form.name}
+          onChange={handleChange}
+          required
+        />
+        <input
+          name="email"
+          type="email"
+          placeholder="Email"
+          value={form.email}
+          onChange={handleChange}
+          required
+        />
+        <input
+          name="password"
+          type="password"
+          placeholder="Password"
+          value={form.password}
+          onChange={handleChange}
+          required
+        />
+        <button type="submit">Register</button>
+        <p style={{ marginTop: "10px" }}>
+          Already have an account? <a href="/login">Login</a>
+        </p>
+      </form>
+    </div>
+  );
+}
+
+export default Register;

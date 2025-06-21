@@ -1,46 +1,75 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const User = require('../models/User');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
+const bcrypt = require("bcryptjs");
+const User = require("../models/User");
 
-const JWT_SECRET = 'your_jwt_secret_key';
+// Get all users (admin only)
+router.get("/", async (req, res) => {
+  const isAdmin = req.query.role === "admin";
+  if (!isAdmin) return res.status(403).json({ message: "Access denied" });
 
-function authMiddleware(req, res, next) {
-  const token = req.headers.authorization;
-  if (!token) return res.status(403).json({ error: 'No token provided' });
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.userId = decoded.id;
-    next();
+    const users = await User.find({ role: { $ne: "admin" } }); // Exclude admin
+    res.json(users);
   } catch (err) {
-    return res.status(401).json({ error: 'Invalid token' });
+    res.status(500).json({ message: "Server error" });
   }
-}
-
-router.use(authMiddleware);
-
-router.get('/', async (req, res) => {
-  const users = await User.find();
-  res.json(users);
 });
 
-router.post('/', async (req, res) => {
-  const { name, email, password } = req.body;
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const user = new User({ name, email, password: hashedPassword });
-  await user.save();
-  res.status(201).json(user);
+// Get single user by ID
+router.get("/:id", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: "Error getting user" });
+  }
 });
 
-router.put('/:id', async (req, res) => {
-  const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
-  res.json(user);
+// Update user (self-edit only)
+router.put("/:id", async (req, res) => {
+  const { name, email, password, userIdFromClient } = req.body;
+
+  // Make sure the ID matches
+  if (req.params.id !== userIdFromClient) {
+    return res.status(403).json({ message: "You can only update your own account" });
+  }
+
+  try {
+    const update = { name, email };
+
+    if (password && password.trim() !== "") {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      update.password = hashedPassword;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, update, {
+      new: true,
+    });
+
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("❌ Update Error:", err);
+    res.status(500).json({ message: "Update failed" });
+  }
 });
 
-router.delete('/:id', async (req, res) => {
-  await User.findByIdAndDelete(req.params.id);
-  res.status(204).send();
+// Delete user (admin only, cannot delete admin)
+router.delete("/:id", async (req, res) => {
+  const isAdmin = req.query.role === "admin";
+  if (!isAdmin) return res.status(403).json({ message: "Access denied" });
+
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.role === "admin") return res.status(403).json({ message: "Cannot delete admin" });
+
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: "User deleted" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 module.exports = router;

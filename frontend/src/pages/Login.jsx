@@ -1,11 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import "./../styles/global.css";
 
 function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
-  const [message, setMessage] = useState("");
   const navigate = useNavigate();
+
+  // 🔒 Redirect to dashboard if already logged in
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem("isLoggedIn");
+    const role = localStorage.getItem("role");
+
+    if (isLoggedIn) {
+      navigate(role === "admin" ? "/admin-dashboard" : "/dashboard");
+    }
+  }, []);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -16,38 +26,27 @@ function Login() {
     try {
       const res = await axios.post("http://localhost:5000/api/login", form);
       const user = res.data.user;
-
-      // ✅ Store login info
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("role", user.role);
       localStorage.setItem("userId", user.id);
-
-      setMessage("Login successful");
-
-      // ✅ Redirect based on role
-      setTimeout(() => {
-        if (user.role === "admin") {
-          navigate("/admin-dashboard");
-        } else {
-          navigate("/dashboard");
-        }
-      }, 1000);
-    } catch (err) {
-      setMessage(err.response?.data?.message || "Login failed");
+      navigate(user.role === "admin" ? "/admin-dashboard" : "/dashboard");
+    } catch {
+      alert("Login failed");
     }
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>Login</h2>
+    <div style={{ display: "grid", placeItems: "center", minHeight: "100vh" }}>
       <form onSubmit={handleSubmit}>
+        <h2>Login</h2>
         <input
           name="email"
+          type="email"
           placeholder="Email"
           value={form.email}
           onChange={handleChange}
           required
-        /><br /><br />
+        />
         <input
           name="password"
           type="password"
@@ -55,10 +54,12 @@ function Login() {
           value={form.password}
           onChange={handleChange}
           required
-        /><br /><br />
+        />
         <button type="submit">Login</button>
+        <p style={{ marginTop: "10px" }}>
+          Don't have an account? <a href="/register">Register</a>
+        </p>
       </form>
-      <p>{message}</p>
     </div>
   );
 }

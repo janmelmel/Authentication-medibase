@@ -1,20 +1,22 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import "./../styles/global.css";
 
-function Dashboard() {
-  const userId = localStorage.getItem("userId");
+function UserDashboard() {
   const [user, setUser] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const userId = localStorage.getItem("userId");
 
   useEffect(() => {
+    // Fetch user data
     const fetchUser = async () => {
       try {
         const res = await axios.get(`http://localhost:5000/api/users/${userId}`);
         setUser(res.data);
         setForm({ name: res.data.name, email: res.data.email, password: "" });
       } catch {
-        alert("Failed to load user");
+        alert("Failed to load user profile");
       }
     };
     fetchUser();
@@ -31,47 +33,39 @@ function Dashboard() {
         userIdFromClient: userId,
       });
       alert("Profile updated");
-      setUser({ ...user, name: form.name, email: form.email });
       setEditMode(false);
+      setUser({ ...user, name: form.name, email: form.email });
     } catch {
       alert("Update failed");
     }
   };
 
-  const logout = () => {
-    localStorage.clear();
-    window.location.href = "/login";
-  };
+  if (!user) return <p>Loading...</p>;
 
   return (
     <div style={{ maxWidth: "500px", margin: "3rem auto" }}>
-      <h2>Dashboard</h2>
-      <p>Welcome to the protected area!</p>
+      <h2>Welcome, {user.name}</h2>
 
-      {user && !editMode && (
-        <>
-          <p><strong>Name:</strong> {user.name}</p>
+      {!editMode ? (
+        <div>
           <p><strong>Email:</strong> {user.email}</p>
-          <button onClick={() => setEditMode(true)} style={{ marginRight: "10px" }}>
-            Edit Profile
-          </button>
-          <button onClick={logout}>Logout</button>
-        </>
-      )}
-
-      {editMode && (
-        <>
+          <button onClick={() => setEditMode(true)}>Edit Profile</button>
+        </div>
+      ) : (
+        <div>
           <input
             name="name"
             value={form.name}
             onChange={handleChange}
             placeholder="Name"
+            required
           />
           <input
             name="email"
             value={form.email}
             onChange={handleChange}
             placeholder="Email"
+            required
           />
           <input
             name="password"
@@ -86,10 +80,10 @@ function Dashboard() {
             </button>
             <button onClick={() => setEditMode(false)}>Cancel</button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
 }
 
-export default Dashboard;
+export default UserDashboard;
